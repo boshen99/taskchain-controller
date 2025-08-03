@@ -1,0 +1,35 @@
+# 任务链控制器插件依赖包
+# Task Chain Controller Plugin Dependencies
+
+# 核心依赖 - Core Dependencies
+dataclasses-json>=0.6.0  # 数据类JSON序列化支持
+typing-extensions>=4.0.0  # 类型注解扩展
+
+# 可选依赖 - Optional Dependencies
+# 用于更好的JSON处理和性能优化
+ujson>=5.0.0  # 更快的JSON处理（可选）
+pydantic>=2.0.0  # 数据验证和序列化（可选）
+
+# 日志和调试 - Logging and Debugging
+loguru>=0.7.0  # 更好的日志记录（可选）
+
+# 时间处理 - Time Handling
+python-dateutil>=2.8.0  # 时间处理工具（可选）
+
+# 缓存支持 - Caching Support
+cachetools>=5.0.0  # 缓存工具（可选）
+
+# 异步支持 - Async Support
+aiofiles>=23.0.0  # 异步文件操作（可选）
+
+# 开发和测试依赖 - Development and Testing Dependencies
+# pytest>=7.0.0  # 测试框架
+# pytest-asyncio>=0.21.0  # 异步测试支持
+# black>=23.0.0  # 代码格式化
+# flake8>=6.0.0  # 代码检查
+# mypy>=1.0.0  # 类型检查
+
+# 注意：
+# 1. 核心依赖是必需的，可选依赖可以根据需要安装
+# 2. 开发依赖已注释，仅在开发环境中需要
+# 3. 所有依赖都兼容Python 3.7+

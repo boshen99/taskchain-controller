@@ -1,0 +1,325 @@
+{
+  "name": "taskchain_controller",
+  "display_name": "通用任务链控制器",
+  "description": "一个通用的任务链控制框架，通过结构化的任务编排和执行机制，帮助AI模型在处理复杂任务时保持注意力聚焦和逻辑清晰。支持多种预设模板和完全自定义的任务链。",
+  "version": "1.0.0",
+  "author": "字伯升 (vx: zibosheng88)",
+  "category": "工作流程",
+  "tags": ["任务管理", "工作流", "AI控制", "结构化思维", "注意力管理"],
+  "runtime": "python3",
+  "entry_point": "main.py",
+  "handler_function": "handler",
+  
+  "input_parameters": {
+    "task_type": {
+      "type": "string",
+      "required": true,
+      "description": "任务链类型，决定使用哪种预设模板或自定义链",
+      "enum": ["analysis", "creative", "education", "research", "custom"],
+      "enum_descriptions": {
+        "analysis": "分析类任务 - 适用于市场分析、竞品研究、数据分析等",
+        "creative": "创意类任务 - 适用于产品设计、内容创作、方案策划等",
+        "education": "教育类任务 - 适用于学习辅导、知识传授、技能培训等",
+        "research": "研究类任务 - 适用于学术研究、调研分析、问题探索等",
+        "custom": "自定义任务链 - 用户完全自定义任务流程"
+      },
+      "default": "analysis",
+      "example": "analysis"
+    },
+    
+    "target": {
+      "type": "string",
+      "required": false,
+      "description": "任务的目标对象或主题，为任务执行提供具体的上下文",
+      "max_length": 500,
+      "example": "电动汽车市场趋势分析",
+      "default": ""
+    },
+    
+    "config": {
+      "type": "object",
+      "required": false,
+      "description": "任务配置参数，用于调整任务执行的深度和重点",
+      "properties": {
+        "depth": {
+          "type": "string",
+          "enum": ["basic", "detailed", "comprehensive"],
+          "description": "分析深度级别",
+          "default": "detailed"
+        },
+        "focus_areas": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "重点关注的领域或方面",
+          "example": ["技术趋势", "市场规模", "竞争格局"]
+        },
+        "language": {
+          "type": "string",
+          "enum": ["zh", "en"],
+          "description": "输出语言",
+          "default": "zh"
+        }
+      },
+      "example": {
+        "depth": "detailed",
+        "focus_areas": ["技术趋势", "市场规模"],
+        "language": "zh"
+      }
+    },
+    
+    "custom_chain": {
+      "type": "array",
+      "required": false,
+      "description": "自定义任务链定义，当task_type为custom时使用",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "任务步骤的唯一标识符"
+          },
+          "name": {
+            "type": "string",
+            "description": "任务步骤的名称"
+          },
+          "description": {
+            "type": "string",
+            "description": "任务步骤的详细描述"
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "该步骤需要的能力模块列表"
+          }
+        },
+        "required": ["name", "description"]
+      },
+      "example": [
+        {
+          "id": "step1",
+          "name": "问题理解",
+          "description": "深入理解用户的核心问题和需求",
+          "required_capabilities": ["理解分析", "需求提取"]
+        },
+        {
+          "id": "step2",
+          "name": "方案生成",
+          "description": "基于理解生成解决方案",
+          "required_capabilities": ["创意生成", "逻辑推理"]
+        }
+      ]
+    },
+    
+    "learning_chain": {
+      "type": "array",
+      "required": false,
+      "description": "学习类任务链定义，当task_type为education时的替代自定义方式",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "description": "学习步骤名称"
+          },
+          "action": {
+            "type": "string",
+            "description": "该步骤的具体行动"
+          }
+        },
+        "required": ["step", "action"]
+      },
+      "example": [
+        {"step": "基础评估", "action": "了解学习者当前水平"},
+        {"step": "路径规划", "action": "制定个性化学习计划"}
+      ]
+    },
+    
+    "continue_on_failure": {
+      "type": "boolean",
+      "required": false,
+      "description": "当某个任务步骤失败时是否继续执行后续步骤",
+      "default": true,
+      "example": true
+    }
+  },
+  
+  "output_parameters": {
+    "success": {
+      "type": "boolean",
+      "description": "任务链执行是否成功"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "本次执行的会话ID，用于追踪和调试"
+    },
+    "task_type": {
+      "type": "string",
+      "description": "执行的任务链类型"
+    },
+    "target": {
+      "type": "string",
+      "description": "任务的目标对象"
+    },
+    "execution_results": {
+      "type": "array",
+      "description": "每个任务步骤的详细执行结果",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {"type": "string", "description": "任务ID"},
+          "status": {"type": "string", "description": "执行状态"},
+          "output": {"type": "object", "description": "任务输出结果"},
+          "execution_time": {"type": "number", "description": "执行耗时（秒）"},
+          "timestamp": {"type": "string", "description": "执行时间戳"}
+        }
+      }
+    },
+    "final_report": {
+      "type": "object",
+      "description": "整合所有任务结果的最终报告",
+      "properties": {
+        "executive_summary": {"type": "string", "description": "执行摘要"},
+        "target_analysis": {"type": "string", "description": "目标分析"},
+        "key_findings": {"type": "array", "description": "关键发现"},
+        "detailed_results": {"type": "object", "description": "详细结果"},
+        "recommendations": {"type": "array", "description": "建议和下一步行动"},
+        "quality_metrics": {"type": "object", "description": "质量指标"}
+      }
+    },
+    "execution_summary": {
+      "type": "object",
+      "description": "执行统计摘要",
+      "properties": {
+        "total_tasks": {"type": "integer", "description": "总任务数"},
+        "completed_tasks": {"type": "integer", "description": "完成任务数"},
+        "failed_tasks": {"type": "integer", "description": "失败任务数"},
+        "total_execution_time": {"type": "number", "description": "总执行时间"}
+      }
+    },
+    "error": {
+      "type": "string",
+      "description": "错误信息（仅在失败时返回）"
+    },
+    "error_code": {
+      "type": "string",
+      "description": "错误代码（仅在失败时返回）"
+    }
+  },
+  
+  "usage_examples": [
+    {
+      "name": "市场分析任务",
+      "description": "使用分析模板进行电动汽车市场趋势分析",
+      "input": {
+        "task_type": "analysis",
+        "target": "电动汽车市场趋势",
+        "config": {
+          "depth": "detailed",
+          "focus_areas": ["技术趋势", "市场规模", "竞争格局"]
+        }
+      },
+      "expected_output": "包含理解目标、信息收集、深度分析、结果综合四个步骤的完整分析报告"
+    },
+    {
+      "name": "创意设计任务",
+      "description": "使用创意模板设计智能手机产品",
+      "input": {
+        "task_type": "creative",
+        "target": "面向老年人的智能手机设计",
+        "config": {
+          "depth": "comprehensive"
+        }
+      },
+      "expected_output": "包含灵感收集、创意生成、方案评估、方案优化的完整创意设计流程"
+    },
+    {
+      "name": "自定义学习任务",
+      "description": "自定义Python学习任务链",
+      "input": {
+        "task_type": "custom",
+        "target": "Python编程学习",
+        "custom_chain": [
+          {
+            "name": "基础评估",
+            "description": "评估学习者当前编程水平",
+            "required_capabilities": ["理解分析", "需求提取"]
+          },
+          {
+            "name": "学习规划",
+            "description": "制定个性化学习计划",
+            "required_capabilities": ["方案设计", "逻辑推理"]
+          },
+          {
+            "name": "知识传授",
+            "description": "讲解Python核心概念",
+            "required_capabilities": ["信息检索", "数据整理"]
+          }
+        ]
+      },
+      "expected_output": "按照自定义步骤执行的个性化Python学习指导"
+    }
+  ],
+  
+  "capabilities": {
+    "standard_capabilities": [
+      "理解分析",
+      "需求提取", 
+      "信息检索",
+      "数据整理",
+      "创意生成",
+      "逻辑推理",
+      "方案设计",
+      "风险评估",
+      "质量验证",
+      "结果整合"
+    ],
+    "capability_descriptions": {
+      "理解分析": "深入理解和分析目标对象的能力",
+      "需求提取": "从复杂信息中提取核心需求的能力",
+      "信息检索": "收集和整理相关信息的能力",
+      "数据整理": "结构化组织数据的能力",
+      "创意生成": "产生创新想法和方案的能力",
+      "逻辑推理": "进行逻辑分析和推理的能力",
+      "方案设计": "设计解决方案的能力",
+      "风险评估": "识别和评估风险的能力",
+      "质量验证": "验证结果质量的能力",
+      "结果整合": "整合多个结果形成综合结论的能力"
+    }
+  },
+  
+  "error_handling": {
+    "error_codes": {
+      "MISSING_REQUIRED_FIELD": "缺少必需的输入参数",
+      "INVALID_TASK_TYPE": "无效的任务类型",
+      "EXECUTION_FAILED": "任务链执行过程中发生错误",
+      "PLUGIN_EXECUTION_FAILED": "插件整体执行失败"
+    },
+    "common_solutions": {
+      "MISSING_REQUIRED_FIELD": "请检查并提供所有必需的输入参数，特别是task_type",
+      "INVALID_TASK_TYPE": "请使用有效的任务类型：analysis, creative, education, research, custom",
+      "EXECUTION_FAILED": "请检查任务链定义和输入参数是否正确",
+      "PLUGIN_EXECUTION_FAILED": "请联系插件开发者或查看详细错误信息"
+    }
+  },
+  
+  "performance": {
+    "average_execution_time": "2-10秒（取决于任务链复杂度）",
+    "max_tasks_per_chain": 20,
+    "memory_usage": "低",
+    "concurrent_support": true
+  },
+  
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2024-01-15",
+      "changes": [
+        "初始版本发布",
+        "支持四种预设任务链模板",
+        "支持完全自定义任务链",
+        "实现十种标准能力模块",
+        "提供详细的执行报告和统计"
+      ]
+    }
+  ]
+}
